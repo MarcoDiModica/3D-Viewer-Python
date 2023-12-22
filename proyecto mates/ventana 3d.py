@@ -182,3 +182,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+    #poner interfaz con:
+        #los ejes los euler axis, quaternions, etc
