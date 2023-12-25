@@ -5,29 +5,33 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 import pyassimp
+import numpy as np
 
 class Cube:
     vertices = (
         (1, -1, -1), (1, 1, -1), (-1, 1, -1), (-1, -1, -1),
         (1, -1, 1), (1, 1, 1), (-1, -1, 1), (-1, 1, 1)
     )
+
     edges = (
         (0, 1), (0, 3), (0, 4), (2, 1), (2, 3), (2, 7),
         (6, 3), (6, 4), (6, 7), (5, 1), (5, 4), (5, 7)
     )
+
     faces = [
         (0, 1, 2, 3), (3, 2, 7, 6), (6, 7, 5, 4),
         (4, 5, 1, 0), (1, 5, 7, 2), (4, 0, 3, 6)
     ]
+
     colors = (
-        (1, 0, 0), (0, 1, 0), (0, 0, 1),
-        (1, 1, 1), (1, 1, 0), (1, 0, 1)
+        (1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1),
+        (1, 1, 1, 1), (1, 1, 0, 1), (1, 0, 1, 1)
     )
 
     def draw(self):
         glBegin(GL_QUADS)
         for face_color, face in enumerate(self.faces):
-            glColor3fv(self.colors[face_color])
+            glColor4fv(self.colors[face_color])
             for vertex in face:
                 glVertex3fv(self.vertices[vertex])
         glEnd()
@@ -50,7 +54,7 @@ class Pyramid:
     )
 
     faces = (
-        (0, 1, 2, 3), (0, 1, 4), (0, 3, 4), (0, 2, 3), (0, 1, 2)
+        (0, 1, 2, 3), (0, 1, 4), (0, 3, 4), (0, 2, 3), (1, 2, 4)
     )
 
     colors = (
@@ -120,6 +124,7 @@ def main():
     obj3d = None  # Inicialmente no hay ningún objeto 3D cargado
 
     cube_rotation = [0, 0]  # Rotación inicial del cubo
+    cube_quaternion = euler_to_quaternion(cube_rotation[0], cube_rotation[1], 0) # Quaternion inicial del cubo
     mouse_down = False  # El mouse inicialmente no está presionado
     last_mouse_pos = (0, 0)  # Posición inicial del mouse
 
@@ -129,6 +134,9 @@ def main():
                 pygame.quit()
                 quit()
             elif event.type == pygame.KEYDOWN:  # Si se presiona una tecla
+                if event.key == pygame.K_ESCAPE:  # Si la tecla es ESC
+                    pygame.quit()  # Cierra pygame
+                    quit()  # Cierra la ventana
                 if event.key == pygame.K_o:  # Si la tecla 'O' se presiona
                     root = tk.Tk()
                     root.withdraw()  # Oculta la ventana de Tkinter
@@ -162,10 +170,13 @@ def main():
                     cube_rotation[1] += dx  # Rota el cubo en el eje y según el desplazamiento horizontal del mouse
                     last_mouse_pos = mouse_pos  # Actualiza la última posición del mouse
 
+        cube_quaternion = euler_to_quaternion(cube_rotation[0], cube_rotation[1], 0)  # Actualiza el quaternion del cubo
+
         glLoadIdentity()
         gluPerspective(fov, (display[0]/display[1]), 0.1, 100.0)  # Actualiza el campo de visión
         glTranslatef(0.0, 0.0, -5)
-
+        glEnable(GL_CULL_FACE)
+        glCullFace(GL_BACK)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 
         if current_figure is not None:  # Si hay una figura seleccionada
@@ -177,12 +188,43 @@ def main():
 
         if obj3d is not None:  # Si hay un objeto 3D cargado, dibujarlo
             obj3d.draw()
+
+        rotation_text = "Rotation: " + str(cube_rotation)
+        quaternion_text = "Quaternion: " + str(cube_quaternion)
+
+        pygame.display.set_caption(rotation_text + " | " + quaternion_text)
+
         pygame.display.flip()
         pygame.time.wait(10)
+
+def euler_to_quaternion(roll, pitch, yaw):
+    qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+    qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
+    qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
+    qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+    return [qx, qy, qz, qw]
+
+def draw_text(text, position):
+    font = pygame.font.Font(None, 24)
+    text_surface = font.render(text, True, (255, 255, 255, 255), (0, 0, 0, 255))
+    text_rect = text_surface.get_rect()
+    text_rect.topleft = position
+    pygame.display.get_surface().blit(text_surface, text_rect)
+
+def draw_text_in_new_window(text):
+    # Crea una nueva ventana
+    info_window = pygame.display.set_mode((300, 200))  # Ajusta el tamaño según tus necesidades
+
+    # Crea la fuente y la superficie del texto
+    font = pygame.font.Font(None, 24)
+    text_surface = font.render(text, True, (255, 255, 255, 255), (0, 0, 0, 255))
+
+    # Dibuja el texto en la nueva ventana
+    info_window.blit(text_surface, (10, 10))  # Ajusta la posición según tus necesidades
+
+    # Actualiza la nueva ventana
+    pygame.display.flip()
 
 if __name__ == "__main__":
     main()
 
-
-    #poner interfaz con:
-        #los ejes los euler axis, quaternions, etc
