@@ -1,10 +1,10 @@
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import simpledialog
 import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
-import pyassimp
 import numpy as np
 
 class Cube:
@@ -43,29 +43,27 @@ class Cube:
                 glVertex3fv(self.vertices[vertex])
         glEnd()
 
-class Pyramid:
+class Tetrahedron:
     vertices = (
-        (0, 1, 0), (1, -1, 1), (1, -1, -1), (-1, -1, -1), (-1, -1, 1)
+        (0, 1, 0), (-1, -1, 1), (1, -1, 1), (0, -1, -1)
     )
 
     edges = (
-        (0, 1), (0, 2), (0, 3), (0, 4), (1, 2),
-        (2, 3), (3, 4), (4, 1)
+        (0, 1), (0, 2), (0, 3), (1, 2), (2, 3), (3, 1)
     )
 
     faces = (
-        (0, 1, 2, 3), (0, 1, 4), (0, 3, 4), (0, 2, 3), (1, 2, 4)
+        (0, 1, 2), (0, 2, 3), (0, 3, 1), (1, 3, 2)
     )
 
     colors = (
-        (1, 0, 0), (0, 1, 0), (0, 0, 1),
-        (1, 1, 1), (1, 1, 0)
+        (1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1), (1, 1, 1, 1)
     )
-    
+
     def draw(self):
-        glBegin(GL_QUADS)
+        glBegin(GL_TRIANGLES)
         for face_color, face in enumerate(self.faces):
-            glColor3fv(self.colors[face_color])
+            glColor4fv(self.colors[face_color])
             for vertex in face:
                 glVertex3fv(self.vertices[vertex])
         glEnd()
@@ -76,35 +74,6 @@ class Pyramid:
             for vertex in edge:
                 glVertex3fv(self.vertices[vertex])
         glEnd()
-
-class Object3D:
-    def __init__(self, filename):
-        self.scene = None
-        self.filename = filename
-
-    def draw(self):
-        with pyassimp.load(self.filename) as scene:
-            self.scene = scene
-            for mesh in scene.meshes:
-                glBegin(GL_TRIANGLES)
-                for face in mesh.faces:
-                    for index in face.indices:
-                        vertex = mesh.vertices[index]
-                        if isinstance(vertex, (list, tuple)) and len(vertex) == 3:
-                            glVertex3fv(vertex)
-                        else:
-                            print(f"Unexpected vertex data: {vertex}")
-                glEnd()
-
-    def __del__(self):
-        # Es importante liberar los recursos cuando ya no se necesitan
-        pyassimp.release(self.scene)
-
-def open_file_dialog():
-    root = tk.Tk()
-    root.withdraw()
-    filename = filedialog.askopenfilename()
-    return filename
 
 def main():
     pygame.init()
@@ -117,11 +86,10 @@ def main():
 
     figures = {
     1: Cube(),
-    2: Pyramid(),
+    2: Tetrahedron(),
 }
 
     current_figure = figures[1]  # Figura actual
-    obj3d = None  # Inicialmente no hay ningún objeto 3D cargado
 
     cube_rotation = [0, 0]  # Rotación inicial del cubo
     cube_quaternion = euler_to_quaternion(cube_rotation[0], cube_rotation[1], 0) # Quaternion inicial del cubo
@@ -137,20 +105,96 @@ def main():
                 if event.key == pygame.K_ESCAPE:  # Si la tecla es ESC
                     pygame.quit()  # Cierra pygame
                     quit()  # Cierra la ventana
-                if event.key == pygame.K_o:  # Si la tecla 'O' se presiona
+                elif event.key == pygame.K_1:  # Si la tecla es 1, 2, 3 o 4
+                    current_figure = figures[1]
+                elif event.key == pygame.K_2:  # Si la tecla es 1, 2, 3 o 4
+                    current_figure = figures[2]  # Cambia la figura actual
+                elif event.key == pygame.K_r:  # Si la tecla 'R' se presiona
+                    cube_rotation = [0, 0]
+                elif event.key == pygame.K_LEFT:
+                    cube_rotation[1] -= 5  # Rotar a la izquierda
+                elif event.key == pygame.K_RIGHT:
+                    cube_rotation[1] += 5  # Rotar a la derecha
+                elif event.key == pygame.K_UP:
+                    cube_rotation[0] -= 5  # Rotar hacia arriba
+                elif event.key == pygame.K_DOWN:
+                    cube_rotation[0] += 5  # Rotar hacia abajo
+                elif event.key == pygame.K_q:  # Si la tecla 'Q' se presiona
+                    controls_window = tk.Tk()
+                    controls_window.title("Controls")
+
+                    control1_label = tk.Label(controls_window, text="Si mantienes click izquierdo en la figura y mueves el mouse podras mover la figura")
+                    control1_label.pack()
+
+                    control2_label = tk.Label(controls_window, text="Tambien podras mover la figura con las flechas direccionales")
+                    control2_label.pack()
+
+                    control3_label = tk.Label(controls_window, text="Presiona 'R' para reiniciar la rotacion de la figura")
+                    control3_label.pack()
+
+                    control5_label = tk.Label(controls_window, text="Presiona 'M' para ingresar una rotacion en grados")
+                    control5_label.pack()
+
+                    control6_label = tk.Label(controls_window, text="Presiona 'N' para ingresar un quaternion")
+                    control6_label.pack()
+
+                    control7_label = tk.Label(controls_window, text="Presiona 'I' para ver la informacion de la figura")
+                    control7_label.pack()
+
+                    # Agrega mas
+
+                    controls_window.mainloop()
+                elif event.key == pygame.K_m:  # Si la tecla 'M' se presiona
                     root = tk.Tk()
                     root.withdraw()  # Oculta la ventana de Tkinter
-                    file_path = filedialog.askopenfilename()  # Abre la ventana de diálogo de archivo
-                    print(file_path)  # Imprime el camino del archivo seleccionado
+                    rotation_input_x = simpledialog.askstring("Input", "Enter rotation for x-axis:",
+                                                              parent=root)
+                    rotation_input_y = simpledialog.askstring("Input", "Enter rotation for y-axis:",
+                                                              parent=root)
+                    x = int(rotation_input_x)
+                    y = int(rotation_input_y)
+                    cube_rotation = [x, y]
                     root.destroy()  # Destruye la ventana de Tkinter
-                    obj3d = Object3D(file_path)  # Crea un objeto 3D con el archivo seleccionado
-                    current_figure = obj3d  # Establece el objeto 3D como la figura actual
-                if event.key == pygame.K_1:  # Si la tecla es 1, 2, 3 o 4
-                    current_figure = figures[1]
-                if event.key == pygame.K_2:  # Si la tecla es 1, 2, 3 o 4
-                    current_figure = figures[2]  # Cambia la figura actual
-                if event.key == pygame.K_r:  # Si la tecla 'R' se presiona
-                    cube_rotation = [0, 0]
+                elif event.key == pygame.K_n:  # Si la tecla 'N' se presiona
+                    root = tk.Tk()
+                    root.withdraw()  # Oculta la ventana de Tkinter
+                    quaternion_input_w = simpledialog.askstring("Input", "Enter quaternion w component:",
+                                                                parent=root)
+                    quaternion_input_x = simpledialog.askstring("Input", "Enter quaternion x component:",
+                                                                parent=root)
+                    quaternion_input_y = simpledialog.askstring("Input", "Enter quaternion y component:",
+                                                                parent=root)
+                    quaternion_input_z = simpledialog.askstring("Input", "Enter quaternion z component:",
+                                                                parent=root)
+                    w = float(quaternion_input_w)
+                    x = float(quaternion_input_x)
+                    y = float(quaternion_input_y)
+                    z = float(quaternion_input_z)
+                    cube_quaternion = [w, x, y, z]
+                    root.destroy()  # Destruye la ventana de Tkinter
+                elif event.key == pygame.K_i:  # Si la tecla 'I' se presiona
+                    info_window = tk.Tk()
+                    info_window.title("Information")
+
+                    rotation_label = tk.Label(info_window, text="Rotation: " + str(cube_rotation))
+                    rotation_label.pack()
+
+                    quaternion_label = tk.Label(info_window, text="Quaternion: (" + ", ".join(f"{i:.4f}" for i in cube_quaternion) + ")")
+                    quaternion_label.pack()
+
+                    euler_principal_label = tk.Label(info_window, text="Euler Principal Angle and Axis: ...")  # Reemplaza '...' con la información correspondiente
+                    euler_principal_label.pack()
+
+                    euler_angles_label = tk.Label(info_window, text="Euler Angles: ...")  # Reemplaza '...' con la información correspondiente
+                    euler_angles_label.pack()
+
+                    rotation_vector_label = tk.Label(info_window, text="Rotation Vector: ...")  # Reemplaza '...' con la información correspondiente
+                    rotation_vector_label.pack()
+
+                    rotation_matrix_label = tk.Label(info_window, text="Rotation Matrix: ...")  # Reemplaza '...' con la información correspondiente
+                    rotation_matrix_label.pack()
+
+                    info_window.mainloop()
             elif event.type == pygame.MOUSEBUTTONDOWN:  # Si el botón del mouse se presiona
                 if event.button == 1:  # Si el botón izquierdo del mouse se presiona
                     mouse_down = True
@@ -170,6 +214,8 @@ def main():
                     cube_rotation[1] += dx  # Rota el cubo en el eje y según el desplazamiento horizontal del mouse
                     last_mouse_pos = mouse_pos  # Actualiza la última posición del mouse
 
+        cube_rotation[0] %= 360  # Limita la rotación en el eje x a 360 grados
+        cube_rotation[1] %= 360  # Limita la rotación en el eje y a 360 grados
         cube_quaternion = euler_to_quaternion(cube_rotation[0], cube_rotation[1], 0)  # Actualiza el quaternion del cubo
 
         glLoadIdentity()
@@ -186,45 +232,24 @@ def main():
             current_figure.draw()  # Dibuja la figura
             glPopMatrix()  # Restaura la matriz de transformación
 
-        if obj3d is not None:  # Si hay un objeto 3D cargado, dibujarlo
-            obj3d.draw()
-
-        rotation_text = "Rotation: " + str(cube_rotation)
-        quaternion_text = "Quaternion: " + str(cube_quaternion)
-
-        pygame.display.set_caption(rotation_text + " | " + quaternion_text)
+        pygame.display.set_caption("Ventana 3D: Presiona Q para ver los controles")
 
         pygame.display.flip()
         pygame.time.wait(10)
 
 def euler_to_quaternion(roll, pitch, yaw):
-    qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
-    qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
-    qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
-    qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+    cos_roll_2 = np.cos(roll/2)
+    sin_roll_2 = np.sin(roll/2)
+    cos_pitch_2 = np.cos(pitch/2)
+    sin_pitch_2 = np.sin(pitch/2)
+    cos_yaw_2 = np.cos(yaw/2)
+    sin_yaw_2 = np.sin(yaw/2)
+
+    qx = sin_roll_2 * cos_pitch_2 * cos_yaw_2 - cos_roll_2 * sin_pitch_2 * sin_yaw_2
+    qy = cos_roll_2 * sin_pitch_2 * cos_yaw_2 + sin_roll_2 * cos_pitch_2 * sin_yaw_2
+    qz = cos_roll_2 * cos_pitch_2 * sin_yaw_2 - sin_roll_2 * sin_pitch_2 * cos_yaw_2
+    qw = cos_roll_2 * cos_pitch_2 * cos_yaw_2 + sin_roll_2 * sin_pitch_2 * sin_yaw_2
     return [qx, qy, qz, qw]
-
-def draw_text(text, position):
-    font = pygame.font.Font(None, 24)
-    text_surface = font.render(text, True, (255, 255, 255, 255), (0, 0, 0, 255))
-    text_rect = text_surface.get_rect()
-    text_rect.topleft = position
-    pygame.display.get_surface().blit(text_surface, text_rect)
-
-def draw_text_in_new_window(text):
-    # Crea una nueva ventana
-    info_window = pygame.display.set_mode((300, 200))  # Ajusta el tamaño según tus necesidades
-
-    # Crea la fuente y la superficie del texto
-    font = pygame.font.Font(None, 24)
-    text_surface = font.render(text, True, (255, 255, 255, 255), (0, 0, 0, 255))
-
-    # Dibuja el texto en la nueva ventana
-    info_window.blit(text_surface, (10, 10))  # Ajusta la posición según tus necesidades
-
-    # Actualiza la nueva ventana
-    pygame.display.flip()
 
 if __name__ == "__main__":
     main()
-
