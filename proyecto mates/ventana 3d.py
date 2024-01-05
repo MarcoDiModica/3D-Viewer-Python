@@ -100,6 +100,7 @@ def main():
     mouse_down = False  # El mouse inicialmente no está presionado
     last_mouse_pos = (0, 0)  # Posición inicial del mouse
 
+    # Inicializa la ventana de información en un thread para que no se sobreponga con la ventana principal
     info_window_thread = threading.Thread(target=start_info_window, args=(cube_rotation, cube_quaternion, cube_euler_principal, cube_rotation_vector, cube_rotation_matrix))
     info_window_thread.start()
 
@@ -298,11 +299,11 @@ def start_info_window(cube_rotation, cube_quaternion, cube_euler_principal, cube
         euler_principal_label.config(text="Euler Principal: (" + ", ".join(f"{i:.4f}" for i in print_euler_principal) + ")")
 
         print_rotation_matrix = euler_to_rotation_matrix(cube_rotation[0], cube_rotation[1], 0)
-        rotation_matrix_string = '\n'.join(['\t'.join([str(cell) for cell in row]) for row in print_rotation_matrix])
+        rotation_matrix_string = '\n'.join(['\t'.join([format(cell, ".4f") for cell in row]) for row in print_rotation_matrix])
         rotation_matrix_label.config(text="Rotation Matrix:\n" + rotation_matrix_string)
 
         print_rotation_vector = rotation_matrix_to_rotation_vector(print_rotation_matrix)
-        rotation_vector_string = ', '.join([str(i[0]) for i in print_rotation_vector])
+        rotation_vector_string = ', '.join([format(i[0], ".4f") for i in print_rotation_vector])
         rotation_vector_label.config(text="Rotation Vector: " + rotation_vector_string)
         
         info_window.after(100, update_info_window)  # Actualiza la ventana de información cada 100 ms
