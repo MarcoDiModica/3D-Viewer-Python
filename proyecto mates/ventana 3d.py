@@ -92,16 +92,16 @@ def main():
 
     current_figure = figures[1]  # Figura actual
 
-    cube_rotation = [0, 0]  # Rotación inicial del cubo
-    cube_quaternion = euler_to_quaternion(cube_rotation[0], cube_rotation[1], 0) # Quaternion inicial del cubo
+    cube_euler_angles = [0, 0, 0]  # Ángulos de rotación del cubo en los ejes x e y
+    cube_quaternion = euler_to_quaternion(cube_euler_angles[0], cube_euler_angles[1], 0) # Quaternion inicial del cubo
     cube_euler_principal = quaternion_to_euler_principal(cube_quaternion[0], cube_quaternion[1], cube_quaternion[2], cube_quaternion[3]) # Euler principal inicial del cubo
-    cube_rotation_matrix = euler_to_rotation_matrix(cube_rotation[0], cube_rotation[1], 0) # Matriz de rotación inicial del cubo
+    cube_rotation_matrix = euler_to_rotation_matrix(cube_euler_angles[0], cube_euler_angles[1], 0) # Matriz de rotación inicial del cubo
     cube_rotation_vector = rotation_matrix_to_rotation_vector(cube_rotation_matrix) # Vector de rotación inicial del cubo
     mouse_down = False  # El mouse inicialmente no está presionado
     last_mouse_pos = (0, 0)  # Posición inicial del mouse
 
     # Inicializa la ventana de información en un thread para que no se sobreponga con la ventana principal
-    info_window_thread = threading.Thread(target=start_info_window, args=(cube_rotation, cube_quaternion, cube_euler_principal, cube_rotation_vector, cube_rotation_matrix))
+    info_window_thread = threading.Thread(target=start_info_window, args=(cube_euler_angles, cube_quaternion, cube_euler_principal, cube_rotation_vector, cube_rotation_matrix))
     info_window_thread.start()
 
     while True:
@@ -118,19 +118,15 @@ def main():
                 elif event.key == pygame.K_2:  # Si la tecla es 1, 2, 3 o 4
                     current_figure = figures[2]  # Cambia la figura actual
                 elif event.key == pygame.K_r:  # Si la tecla 'R' se presiona
-                    cube_rotation[:] = [0, 0]
-                    cube_quaternion[:] = euler_to_quaternion(0, 0, 0)
-                    cube_euler_principal[:] = quaternion_to_euler_principal(*cube_quaternion)
-                    cube_rotation_matrix[:] = euler_to_rotation_matrix(0, 0, 0)
-                    cube_rotation_vector[:] = rotation_matrix_to_rotation_vector(cube_rotation_matrix)
+                    cube_euler_angles[:] = [0, 0, 0]  # Reinicia la rotación del cubo
                 elif event.key == pygame.K_LEFT:
-                    cube_rotation[1] -= 5  # Rotar a la izquierda
+                    cube_euler_angles[1] -= 5  # Rotar a la izquierda
                 elif event.key == pygame.K_RIGHT:
-                    cube_rotation[1] += 5  # Rotar a la derecha
+                    cube_euler_angles[1] += 5  # Rotar a la derecha
                 elif event.key == pygame.K_UP:
-                    cube_rotation[0] -= 5  # Rotar hacia arriba
+                    cube_euler_angles[0] -= 5  # Rotar hacia arriba
                 elif event.key == pygame.K_DOWN:
-                    cube_rotation[0] += 5  # Rotar hacia abajo
+                    cube_euler_angles[0] += 5  # Rotar hacia abajo
                 elif event.key == pygame.K_q:  # Si la tecla 'Q' se presiona
                     controls_window = tk.Tk()
                     controls_window.title("Controls")
@@ -170,7 +166,8 @@ def main():
                                                               parent=root)
                     x = int(rotation_input_x)
                     y = int(rotation_input_y)
-                    cube_rotation[:] = [x, y]
+                    z = 0
+                    cube_euler_angles[:] = [x, y, z]
                     root.destroy()  # Destruye la ventana de Tkinter
                 elif event.key == pygame.K_n:  # Si la tecla 'N' se presiona
                     root = tk.Tk()
@@ -188,7 +185,7 @@ def main():
                     y = float(quaternion_input_y)
                     z = float(quaternion_input_z)
                     result = queaternion_to_cube_rotationxy(x, y, z, w)
-                    cube_rotation[:] = [result[0], result[1]]
+                    cube_euler_angles[:] = [result[0], result[1], 0]
                     root.destroy()  # Destruye la ventana de Tkinter
                 elif event.key == pygame.K_b:
                     root = tk.Tk()
@@ -203,7 +200,7 @@ def main():
                     y = float(euler_principal_input_y)
                     z = float(euler_principal_input_z)
                     result = euler_principal_to_cube_rotationxy(x, y, z)                    
-                    cube_rotation[:] = [result[0], result[1]]
+                    cube_euler_angles[:] = [result[0], result[1], 0]
                     root.destroy()
                 elif event.key == pygame.K_v:
                     root = tk.Tk()
@@ -218,7 +215,7 @@ def main():
                     y = float(rotation_vector_input_y)
                     z = float(rotation_vector_input_z)
                     result = rotation_vector_to_cube_rotationxy(x, y, z)
-                    cube_rotation[:] = [result[0], result[1]]
+                    cube_euler_angles[:] = [result[0], result[1], 0]
                     root.destroy()
                 elif event.key == pygame.K_c:
                     root = tk.Tk()
@@ -245,7 +242,7 @@ def main():
                                   [float(rotation_matrix_input_21), float(rotation_matrix_input_22), float(rotation_matrix_input_23)],
                                   [float(rotation_matrix_input_31), float(rotation_matrix_input_32), float(rotation_matrix_input_33)]])
                     result = rotation_matrix_to_cube_rotationxy(x)
-                    cube_rotation[:] = [result[0], result[1]]
+                    cube_euler_angles[:] = [result[0], result[1], 0]
                     root.destroy()              
             elif event.type == pygame.MOUSEBUTTONDOWN:  # Si el botón del mouse se presiona
                 if event.button == 1:  # Si el botón izquierdo del mouse se presiona
@@ -262,15 +259,15 @@ def main():
                 if mouse_down:  # Si el botón izquierdo del mouse está presionado
                     mouse_pos = pygame.mouse.get_pos()  # Obtiene la posición actual del mouse
                     dx, dy = mouse_pos[0] - last_mouse_pos[0], mouse_pos[1] - last_mouse_pos[1]  # Calcula el desplazamiento del mouse
-                    cube_rotation[0] += dy  # Rota el cubo en el eje x según el desplazamiento vertical del mouse
-                    cube_rotation[1] += dx  # Rota el cubo en el eje y según el desplazamiento horizontal del mouse
+                    cube_euler_angles[0] += dy  # Rota el cubo en el eje x según el desplazamiento vertical del mouse
+                    cube_euler_angles[1] += dx  # Rota el cubo en el eje y según el desplazamiento horizontal del mouse
                     last_mouse_pos = mouse_pos  # Actualiza la última posición del mouse
 
-        cube_rotation[0] %= 360  # Limita la rotación en el eje x a 360 grados
-        cube_rotation[1] %= 360  # Limita la rotación en el eje y a 360 grados
-        cube_quaternion = euler_to_quaternion(cube_rotation[0], cube_rotation[1], 0)  # Actualiza el quaternion del cubo
+        cube_euler_angles[0] %= 360  # Limita la rotación en el eje x a 360 grados
+        cube_euler_angles[1] %= 360  # Limita la rotación en el eje y a 360 grados
+        cube_quaternion = euler_to_quaternion(cube_euler_angles[0], cube_euler_angles[1], 0)  # Actualiza el quaternion del cubo
         cube_euler_principal = quaternion_to_euler_principal(cube_quaternion[0], cube_quaternion[1], cube_quaternion[2], cube_quaternion[3])  # Actualiza el euler principal del cubo
-        cube_rotation_matrix = euler_to_rotation_matrix(cube_rotation[0], cube_rotation[1], 0)  # Actualiza la matriz de rotación del cubo
+        cube_rotation_matrix = euler_to_rotation_matrix(cube_euler_angles[0], cube_euler_angles[1], 0)  # Actualiza la matriz de rotación del cubo
         cube_rotation_vector = rotation_matrix_to_rotation_vector(cube_rotation_matrix)  # Actualiza el vector de rotación del cubo
 
         glLoadIdentity()
@@ -282,8 +279,8 @@ def main():
 
         if current_figure is not None:  # Si hay una figura seleccionada
             glPushMatrix()  # Guarda la matriz de transformación actual
-            glRotatef(cube_rotation[0], 1, 0, 0)  # Rota la figura en el eje x
-            glRotatef(cube_rotation[1], 0, 1, 0)  # Rota la figura en el eje y
+            glRotatef(cube_euler_angles[0], 1, 0, 0)  # Rota la figura en el eje x
+            glRotatef(cube_euler_angles[1], 0, 1, 0)  # Rota la figura en el eje y
             current_figure.draw()  # Dibuja la figura
             glPopMatrix()  # Restaura la matriz de transformación
 
