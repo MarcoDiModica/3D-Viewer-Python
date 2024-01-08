@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog
+#from tkinter import filedialog
 from tkinter import simpledialog
 import pygame
 from pygame.locals import *
@@ -187,7 +187,8 @@ def main():
                     x = float(quaternion_input_x)
                     y = float(quaternion_input_y)
                     z = float(quaternion_input_z)
-                    cube_rotation[:] = quaternion_to_euler(x, y, z, w)
+                    result = queaternion_to_cube_rotationxy(x, y, z, w)
+                    cube_rotation[:] = [result[0], result[1]]
                     root.destroy()  # Destruye la ventana de Tkinter
                 elif event.key == pygame.K_b:
                     root = tk.Tk()
@@ -201,7 +202,8 @@ def main():
                     x = float(euler_principal_input_x)
                     y = float(euler_principal_input_y)
                     z = float(euler_principal_input_z)
-                    cube_rotation[:] = quaternion_to_euler_principal(x, y, z, 0) 
+                    result = euler_principal_to_cube_rotationxy(x, y, z)                    
+                    cube_rotation[:] = [result[0], result[1]]
                     root.destroy()
                 elif event.key == pygame.K_v:
                     root = tk.Tk()
@@ -215,7 +217,8 @@ def main():
                     x = float(rotation_vector_input_x)
                     y = float(rotation_vector_input_y)
                     z = float(rotation_vector_input_z)
-                    cube_rotation[:] = rotation_matrix_to_rotation_vector(np.array([[x], [y], [z]]))
+                    result = rotation_vector_to_cube_rotationxy(x, y, z)
+                    cube_rotation[:] = [result[0], result[1]]
                     root.destroy()
                 elif event.key == pygame.K_c:
                     root = tk.Tk()
@@ -241,7 +244,8 @@ def main():
                     x = np.array([[float(rotation_matrix_input_11), float(rotation_matrix_input_12), float(rotation_matrix_input_13)], 
                                   [float(rotation_matrix_input_21), float(rotation_matrix_input_22), float(rotation_matrix_input_23)],
                                   [float(rotation_matrix_input_31), float(rotation_matrix_input_32), float(rotation_matrix_input_33)]])
-                    cube_rotation[:] = rotation_matrix_to_rotation_vector(x)
+                    result = rotation_matrix_to_cube_rotationxy(x)
+                    cube_rotation[:] = [result[0], result[1]]
                     root.destroy()              
             elif event.type == pygame.MOUSEBUTTONDOWN:  # Si el botón del mouse se presiona
                 if event.button == 1:  # Si el botón izquierdo del mouse se presiona
@@ -343,10 +347,10 @@ def euler_to_quaternion(roll, pitch, yaw):
     qw = cos_roll_2 * cos_pitch_2 * cos_yaw_2 + sin_roll_2 * sin_pitch_2 * sin_yaw_2
     return [qx, qy, qz, qw]
 
-def quaternion_to_euler(x, y, z, w):
-    roll = np.arctan2(2*(w*x + y*z), 1 - 2*(x**2 + y**2))
-    pitch = np.arcsin(2*(w*y - z*x))
-    yaw = np.arctan2(2*(w*z + x*y), 1 - 2*(y**2 + z**2))
+def queaternion_to_cube_rotationxy(qx, qy, qz, qw):
+    roll = np.arctan2(2*(qw*qx + qy*qz), 1 - 2*(qx**2 + qy**2))
+    pitch = np.arcsin(2*(qw*qy - qz*qx))
+    yaw = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
     return [roll, pitch, yaw]
 
 def quaternion_to_euler_principal(x, y, z, w):
@@ -354,6 +358,34 @@ def quaternion_to_euler_principal(x, y, z, w):
     pitch = np.arcsin(2*(w*y - z*x))
     yaw = np.arctan2(2*(w*z + x*y), 1 - 2*(y**2 + z**2))
     return [roll, pitch, yaw]
+
+def euler_principal_to_quaternion(roll, pitch, yaw):
+    cos_roll_2 = np.cos(roll/2)
+    sin_roll_2 = np.sin(roll/2)
+    cos_pitch_2 = np.cos(pitch/2)
+    sin_pitch_2 = np.sin(pitch/2)
+    cos_yaw_2 = np.cos(yaw/2)
+    sin_yaw_2 = np.sin(yaw/2)
+
+    qx = sin_roll_2 * cos_pitch_2 * cos_yaw_2 - cos_roll_2 * sin_pitch_2 * sin_yaw_2
+    qy = cos_roll_2 * sin_pitch_2 * cos_yaw_2 + sin_roll_2 * cos_pitch_2 * sin_yaw_2
+    qz = cos_roll_2 * cos_pitch_2 * sin_yaw_2 - sin_roll_2 * sin_pitch_2 * cos_yaw_2
+    qw = cos_roll_2 * cos_pitch_2 * cos_yaw_2 + sin_roll_2 * sin_pitch_2 * sin_yaw_2
+    return [qx, qy, qz, qw]
+
+def euler_principal_to_cube_rotationxy(roll, pitch, yaw):
+    roll = np.arctan2(np.sin(roll), np.cos(roll))
+    pitch = np.arctan2(np.sin(pitch), np.cos(pitch))
+    yaw = np.arctan2(np.sin(yaw), np.cos(yaw))
+    return [roll, pitch, yaw]
+
+def rotation_vector_to_quaternion(x, y, z):
+    theta = np.sqrt(x**2 + y**2 + z**2)
+    qx = x * np.sin(theta/2)/theta
+    qy = y * np.sin(theta/2)/theta
+    qz = z * np.sin(theta/2)/theta
+    qw = np.cos(theta/2)
+    return [qx, qy, qz, qw]
 
 def euler_to_rotation_matrix(roll, pitch, yaw):
     R_x = np.array([[1, 0, 0],
@@ -378,6 +410,18 @@ def rotation_matrix_to_rotation_vector(R):
                                          [R[1, 0] - R[0, 1]]])
     return theta*k
 
+def rotation_matrix_to_cube_rotationxy(R):
+    roll = np.arctan2(R[2, 1], R[2, 2])
+    pitch = np.arctan2(-R[2, 0], np.sqrt(R[2, 1]**2 + R[2, 2]**2))
+    yaw = np.arctan2(R[1, 0], R[0, 0])
+    return [roll, pitch, yaw]
+
+def rotation_vector_to_cube_rotationxy(x, y, z):
+    theta = np.sqrt(x**2 + y**2 + z**2)
+    roll = np.arctan2(z, y)
+    pitch = np.arctan2(-z, x)
+    yaw = np.arctan2(y, x)
+    return [roll, pitch, yaw]
 if __name__ == "__main__":
     main()
 
