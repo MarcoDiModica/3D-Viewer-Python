@@ -419,9 +419,12 @@ def rotation_vector_to_cube_rotationxy(x, y, z):
     pitch = np.arctan2(-z, x)
     yaw = np.arctan2(y, x)
     return [roll, pitch, yaw]
+
 if __name__ == "__main__":
     main()
 
+
+#hola muy buenas
 
 # info_window = tk.Tk()
 #         info_window.title("Information")
